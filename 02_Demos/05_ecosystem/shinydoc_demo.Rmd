@@ -1,0 +1,98 @@
+---
+title: "Démo Document Shiny"
+author: "Soft Computing"
+output:
+  html_document:
+    theme: lumen
+    highlight: haddock
+    toc: true
+    toc_depth: 2
+runtime: shiny
+---
+
+Nous allons dans ce document montrer comment intégrer des éléments `Shiny` au sein d'une publication html.
+
+
+## Exemple 1 : Tableau de données
+
+```{r message=FALSE, warning=FALSE}
+library(DT)
+datatable(
+  iris, filter = "top",
+  extensions = 'Buttons', options = list(
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+  )
+)
+```
+
+
+## Exemple 2 : Graphique
+
+
+```{r message=FALSE, warning=FALSE}
+
+inputPanel(
+  selectInput("n_breaks", label = "Nombre de barres:",
+              choices = c(10, 20, 35, 50), selected = 20),
+  
+  sliderInput("bw_adjust", label = "Ajustement:",
+              min = 0.2, max = 2, value = 1, step = 0.2)
+)
+
+renderPlot({
+  hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+       xlab = "Durée (minutes)", main = "Durée d'éruption du geyser")
+  
+  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+  lines(dens, col = "blue")
+})
+```
+
+## Exemple 3 : Carte interactive
+
+Fonds de carte téléchargé sur [gadm.org](https://gadm.org/download_country_v3.html)
+
+```{r message=FALSE, warning=FALSE}
+library(leaflet)
+library(sp)
+library(tidyverse)
+library(raster)
+
+# provinces belges
+belgique <- raster::getData("GADM", country = "BEL", level = 2)
+belgique.data <- belgique@data
+choix.provinces <- belgique.data %>% dplyr::select(NAME_2) %>% t() %>% as.character()
+
+inputPanel(
+  selectInput("provname", label = "Quelle province?",
+              choices = choix.provinces, selected = "Bruxelles"))
+
+renderLeaflet({
+  mymap <- subset(belgique, NAME_2==input$provname)
+  leaflet(mymap) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(color = "#2DC25F")
+})
+
+
+```
+
+
+
+
+## Exemple 4 : Intégration d'une application externe
+
+Il est possible d'intégrer une application Shiny simplement en pointant vers son dossier avec la fonction `shinyAppDir`
+
+```{r message=FALSE, warning=FALSE}
+
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+

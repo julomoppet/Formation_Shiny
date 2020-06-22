@@ -1,0 +1,97 @@
+---
+title: "Exemple de FlexDashboard Shiny"
+output: flexdashboard::flex_dashboard
+runtime: shiny
+---
+
+```{r global, include=FALSE}
+
+library(flexdashboard)
+library(leaflet)
+library(sp)
+library(tidyverse)
+library(readxl)
+library(raster)
+
+ined <- read_excel("ined.xlsx")
+
+belgique <- raster::getData("GADM", country = "BEL", level = 0)
+france <- raster::getData("GADM", country = "FRA", level = 0)
+espagne <- raster::getData("GADM", country = "ESP", level = 0)
+
+europe <- rbind(belgique, france, makeUniqueIDs = TRUE) 
+europe <- rbind(europe, espagne, makeUniqueIDs = TRUE)
+
+europe$PAYS[europe$GID_0=="BEL"] <- "Belgique"
+europe$PAYS[europe$GID_0=="FRA"] <- "France"
+europe$PAYS[europe$GID_0=="ESP"] <- "Espagne"
+
+europe.data <- europe@data
+
+choix.pays <-
+    europe.data %>% dplyr::select(PAYS) %>% distinct(PAYS) %>% arrange(PAYS) %>% t() %>% as.character()
+
+```
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
+
+selectInput("pays",
+            label = "Quel pays?",
+            choices = choix.pays,
+            selected = "Belgique")
+
+```
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+### Carte
+
+```{r}
+
+renderLeaflet({
+    mymap <- subset(europe, PAYS == input$pays)
+    leaflet(mymap) %>%
+        addProviderTiles(providers$OpenStreetMap.France) %>%
+        addPolygons(color = "#E3122A")
+})
+
+```
+
+
+
+### Démographie
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### 1 ère partie
+```{r}
+
+DT::renderDataTable({
+    mydata <- ined %>% filter(PAYS == input$pays)
+    DT::datatable(mydata,
+    options=list(paging = FALSE,dom='t'),
+    rownames = FALSE)
+})
+    
+```
+
+### 2ème partie
+
+
+
+### Sources
+
+Les fonds de carte sont issus du site [GADM](https://gadm.org/).
+
+</br>
+Les données par pays sont issues du site de l'[INED](https://www.ined.fr/en/everything_about_population/data/all-countries)
+</br>
+![](https://www.ined.fr/img/logo.svg){width=100px}

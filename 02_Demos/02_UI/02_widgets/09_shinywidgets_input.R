@@ -1,0 +1,3 @@
+library(shinyWidgets)
+
+shinyWidgetsGallery()
